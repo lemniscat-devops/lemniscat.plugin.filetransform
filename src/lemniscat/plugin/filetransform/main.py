@@ -25,8 +25,11 @@ class Action(PluginCore):
 
     def __run_filetransform(self, parameters: dict = {}, variables: dict = {}) -> TaskResult:
         # launch powershell command
-        filetransform = FileTransform()     
-        result = filetransform.run(parameters['folderPath'], parameters['targetFiles'], parameters['fileType'], variables)
+        filetransform = FileTransform()
+        if(parameters.keys().__contains__('folderOutPath') == False):
+            parameters['folderOutPath'] = parameters['folderPath']
+                 
+        result = filetransform.run(parameters['folderPath'], parameters['targetFiles'], parameters['fileType'], parameters['folderOutPath'], variables)
                 
         if(result[0] != 0):
             return TaskResult(

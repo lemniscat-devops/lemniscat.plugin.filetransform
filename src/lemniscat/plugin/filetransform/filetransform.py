@@ -68,6 +68,10 @@ class FileTransform:
     def getFilesPathMatchPattern(directory, pattern) -> list:
         import glob
         return glob.glob(f'{directory}/{pattern}')
+    
+    @staticmethod
+    def getFileNameFromPath(filePath) -> str:
+        return os.path.basename(filePath)
 
     # replace variable in dict
     @staticmethod
@@ -81,7 +85,7 @@ class FileTransform:
                     data[k] = FileTransform.replaceVariable(v.copy(), key, value, f'{prefix}{k}.')
         return data
 
-    def run(self, folderPath: str, targetFiles: str, fileType: str, variables: dict = {}) -> None:
+    def run(self, folderPath: str, targetFiles: str, fileType: str, folderOutPath: str, variables: dict = {}) -> None:
         # get all files path match pattern
         files = self.getFilesPathMatchPattern(folderPath, targetFiles)
         # loop files
@@ -98,10 +102,11 @@ class FileTransform:
             for key, value in variables.items():
                 data = self.replaceVariable(data, key, value)
             # save file
+            outfile = f'{folderOutPath}/{self.getFileNameFromPath(file)}'
             if(fileType == 'yaml'):
-                self.saveYamlFile(file, data)
+                self.saveYamlFile(outfile, data)
             elif(fileType == 'json'):
-                self.saveJsonFile(file, data)
+                self.saveJsonFile(outfile, data)
             else:
                 log.error('File type not supported')
                 return 1, '','File type not supported'
