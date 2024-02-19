@@ -5,7 +5,7 @@ import logging
 import os
 from logging import Logger
 from lemniscat.core.contract.engine_contract import PluginCore
-from lemniscat.core.model.models import Meta, TaskResult
+from lemniscat.core.model.models import Meta, TaskResult, VariableValue
 from lemniscat.core.util.helpers import FileSystem, LogUtil
 
 from lemniscat.plugin.filetransform.filetransform import FileTransform
@@ -73,4 +73,8 @@ if __name__ == "__main__":
     logger = LogUtil.create()
     action = Action(logger)
     __cli_args = __init_cli().parse_args()   
-    action.invoke(ast.literal_eval(__cli_args.parameters), ast.literal_eval(__cli_args.variables))
+    variables = {}   
+    vars = ast.literal_eval(__cli_args.variables)
+    for key in vars:
+        variables[key] = VariableValue(vars[key])
+    action.invoke(ast.literal_eval(__cli_args.parameters), variables)

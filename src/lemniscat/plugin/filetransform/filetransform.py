@@ -100,7 +100,7 @@ class FileTransform:
                 return 1, '','File type not supported'
             # replace variables
             for key, value in variables.items():
-                data = self.replaceVariable(data, key, value)
+                data = self.replaceVariable(data, key, value.value)
             # save file
             outfile = f'{folderOutPath}/{self.getFileNameFromPath(file)}'
             if(fileType == 'yaml'):
