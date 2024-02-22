@@ -78,7 +78,7 @@ class FileTransform:
     def replaceVariable(data: dict, key: str, value: str, prefix: str = '') -> dict:
         for k, v in data.items():
             if(f'{prefix}{k}'.casefold() == key.casefold()):
-                log.debug(f'Found {key}. Replace {key}...')
+                log.info(f'Found {key}. Replace {key}...')
                 data[k] = value
             else:
                 if(isinstance(v, dict) and key.casefold().startswith(f'{prefix}{k}'.casefold()) ):
