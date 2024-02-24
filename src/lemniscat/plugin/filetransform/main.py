@@ -4,12 +4,14 @@ import ast
 import logging
 import os
 from logging import Logger
+import re
 from lemniscat.core.contract.engine_contract import PluginCore
 from lemniscat.core.model.models import Meta, TaskResult, VariableValue
 from lemniscat.core.util.helpers import FileSystem, LogUtil
 
 from lemniscat.plugin.filetransform.filetransform import FileTransform
 
+_REGEX_CAPTURE_VARIABLE = r"(?:\${{(?P<var>[^}]+)}})"
 
 class Action(PluginCore):
 
@@ -23,13 +25,32 @@ class Action(PluginCore):
             version=manifest_data['version']
         )
 
+    def __interpret(self, parameterValue: str, variables: dict) -> str:
+        isSensible = False
+        if(parameterValue is None):
+            return None
+        if(isinstance(parameterValue, str)):
+            matches = re.findall(_REGEX_CAPTURE_VARIABLE, parameterValue)
+            if(len(matches) > 0):
+                for match in matches:
+                    var = str.strip(match)
+                    if(var in variables):
+                        parameterValue = parameterValue.replace(f'${{{{{match}}}}}', variables[var].value)
+                        if(variables[var].sensitive):
+                            isSensible = True
+                        self._logger.debug(f"Interpreting variable: {var} -> {variables[var]}")
+                    else:
+                        parameterValue = parameterValue.replace(f'${{{{{match}}}}}', "")
+                        self._logger.debug(f"Variable not found: {var}. Replaced by empty string.")
+        return VariableValue(parameterValue, isSensible) 
+
     def __run_filetransform(self, parameters: dict = {}, variables: dict = {}) -> TaskResult:
         # launch powershell command
         filetransform = FileTransform()
         if(parameters.keys().__contains__('folderOutPath') == False):
             parameters['folderOutPath'] = parameters['folderPath']
                  
-        result = filetransform.run(parameters['folderPath'], parameters['targetFiles'], parameters['fileType'], parameters['folderOutPath'], variables)
+        result = filetransform.run(self.__interpret(parameters['folderPath'], variables).value, self.__interpret(parameters['targetFiles'], variables).value, self.__interpret(parameters['fileType'], variables).value, self.__interpret(parameters['folderOutPath'], variables).value, variables)
                 
         if(result[0] != 0):
             return TaskResult(
