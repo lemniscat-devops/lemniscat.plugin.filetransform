@@ -49,7 +49,7 @@ class FileTransform:
         import yaml
         with open(filePath, 'w') as stream:
             try:
-                yaml.dump(data, stream)
+                yaml.dump(data, stream, indent=4)
             except yaml.YAMLError as exc:
                 log.error(exc)
 
@@ -59,7 +59,7 @@ class FileTransform:
         import json
         with open(filePath, 'w') as stream:
             try:
-                json.dump(data, stream)
+                json.dump(data, stream, indent=4)
             except json.JSONDecodeError as exc:
                 log.error(exc)
                 
