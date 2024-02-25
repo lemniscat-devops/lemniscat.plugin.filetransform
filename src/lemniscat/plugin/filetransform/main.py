@@ -25,32 +25,13 @@ class Action(PluginCore):
             version=manifest_data['version']
         )
 
-    def __interpret(self, parameterValue: str, variables: dict) -> str:
-        isSensible = False
-        if(parameterValue is None):
-            return None
-        if(isinstance(parameterValue, str)):
-            matches = re.findall(_REGEX_CAPTURE_VARIABLE, parameterValue)
-            if(len(matches) > 0):
-                for match in matches:
-                    var = str.strip(match)
-                    if(var in variables):
-                        parameterValue = parameterValue.replace(f'${{{{{match}}}}}', variables[var].value)
-                        if(variables[var].sensitive):
-                            isSensible = True
-                        self._logger.debug(f"Interpreting variable: {var} -> {variables[var]}")
-                    else:
-                        parameterValue = parameterValue.replace(f'${{{{{match}}}}}', "")
-                        self._logger.debug(f"Variable not found: {var}. Replaced by empty string.")
-        return VariableValue(parameterValue, isSensible) 
-
-    def __run_filetransform(self, parameters: dict = {}, variables: dict = {}) -> TaskResult:
+    def __run_filetransform(self) -> TaskResult:
         # launch powershell command
         filetransform = FileTransform()
-        if(parameters.keys().__contains__('folderOutPath') == False):
-            parameters['folderOutPath'] = parameters['folderPath']
+        if(self.parameters.keys().__contains__('folderOutPath') == False):
+            self.parameters['folderOutPath'] = self.parameters['folderPath']
                  
-        result = filetransform.run(self.__interpret(parameters['folderPath'], variables).value, self.__interpret(parameters['targetFiles'], variables).value, self.__interpret(parameters['fileType'], variables).value, self.__interpret(parameters['folderOutPath'], variables).value, variables)
+        result = filetransform.run(self.parameters['folderPath'], self.parameters['targetFiles'], self.parameters['fileType'], self.parameters['folderOutPath'], self.variables)
                 
         if(result[0] != 0):
             return TaskResult(
@@ -65,9 +46,10 @@ class Action(PluginCore):
         )
         
 
-    def invoke(self, parameters: dict = {}, variables: dict = {}) -> TaskResult:
-        self._logger.debug(f'Transform file for {parameters["fileType"]} -> {self.meta}')
-        task = self.__run_filetransform(parameters, variables)
+    def invoke(self, params: dict = {}, variables: dict = {}) -> TaskResult:
+        super().invoke(params, variables)
+        self._logger.debug(f'Transform file for {self.parameters["fileType"]} -> {self.meta}')
+        task = self.__run_filetransform()
         return task
     
     def test_logger(self) -> None:
