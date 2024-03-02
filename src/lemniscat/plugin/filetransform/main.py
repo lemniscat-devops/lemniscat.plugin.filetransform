@@ -46,8 +46,8 @@ class Action(PluginCore):
         )
         
 
-    def invoke(self, params: dict = {}, variables: dict = {}) -> TaskResult:
-        super().invoke(params, variables)
+    def invoke(self, parameters: dict = {}, variables: dict = {}) -> TaskResult:
+        super().invoke(parameters, variables)
         self._logger.debug(f'Transform file for {self.parameters["fileType"]} -> {self.meta}')
         task = self.__run_filetransform()
         return task
