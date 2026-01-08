@@ -42,7 +42,18 @@ class FileTransform:
             except json.JSONDecodeError as exc:
                 log.error(exc)
                 return None
-            
+
+    # parse hcl file to dict
+    @staticmethod
+    def parseHclFile(filePath) -> dict:
+        import hcl2
+        with open(filePath, 'r') as stream:
+            try:
+                return hcl2.load(stream)
+            except Exception as exc:
+                log.error(exc)
+                return None
+
     # save dict to yaml file
     @staticmethod
     def saveYamlFile(filePath, data: dict) -> None:
@@ -62,7 +73,59 @@ class FileTransform:
                 json.dump(data, stream, indent=4)
             except json.JSONDecodeError as exc:
                 log.error(exc)
-                
+
+    # save dict to hcl file
+    @staticmethod
+    def saveHclFile(filePath, data: dict) -> None:
+        with open(filePath, 'w') as stream:
+            try:
+                content = FileTransform._dictToHcl(data)
+                stream.write(content)
+            except Exception as exc:
+                log.error(exc)
+
+    @staticmethod
+    def _dictToHcl(data: dict, indent: int = 0) -> str:
+        """Convert Python dict to HCL format"""
+        lines = []
+        indent_str = "  " * indent
+
+        for key, value in data.items():
+            if isinstance(value, dict):
+                # Dicts are always map assignments in HCL: key = { ... }
+                # This works for both .tfvars and .tf files
+                lines.append(f'{indent_str}{key} = {{')
+                lines.append(FileTransform._dictToHcl(value, indent + 1).rstrip())
+                lines.append(f'{indent_str}}}')
+            elif isinstance(value, list):
+                # Lists of dicts are blocks (like variable, resource, output)
+                for item in value:
+                    if isinstance(item, dict):
+                        # Block syntax: key { ... } (no =)
+                        lines.append(f'{indent_str}{key} {{')
+                        lines.append(FileTransform._dictToHcl(item, indent + 1).rstrip())
+                        lines.append(f'{indent_str}}}')
+                    else:
+                        # List of primitives: key = value (multiple times)
+                        lines.append(f'{indent_str}{key} = {FileTransform._formatHclValue(item)}')
+            else:
+                # Primitives are always assignments: key = value
+                lines.append(f'{indent_str}{key} = {FileTransform._formatHclValue(value)}')
+
+        return '\n'.join(lines) + '\n'
+
+    @staticmethod
+    def _formatHclValue(value):
+        """Format a Python value for HCL output"""
+        if isinstance(value, bool):
+            return 'true' if value else 'false'
+        elif isinstance(value, str):
+            return f'"{value}"'
+        elif value is None:
+            return 'null'
+        else:
+            return str(value)
+
     # get files path match pattern in directory
     @staticmethod
     def getFilesPathMatchPattern(directory, pattern) -> list:
@@ -83,6 +146,15 @@ class FileTransform:
             else:
                 if(isinstance(v, dict) and key.casefold().startswith(f'{prefix}{k}'.casefold()) ):
                     data[k] = FileTransform.replaceVariable(v.copy(), key, value, f'{prefix}{k}.')
+                elif(isinstance(v, list) and key.casefold().startswith(f'{prefix}{k}'.casefold()) ):
+                    # Handle lists (important for HCL2 structure)
+                    new_list = []
+                    for item in v:
+                        if isinstance(item, dict):
+                            new_list.append(FileTransform.replaceVariable(item.copy(), key, value, f'{prefix}{k}.'))
+                        else:
+                            new_list.append(item)
+                    data[k] = new_list
         return data
 
     def run(self, folderPath: str, targetFiles: str, fileType: str, folderOutPath: str, variables: dict = {}) -> None:
@@ -95,6 +167,8 @@ class FileTransform:
                 data = self.parseYamlFile(file)
             elif(fileType == 'json'):
                 data = self.parseJsonFile(file)
+            elif(fileType == 'hcl'):
+                data = self.parseHclFile(file)
             else:
                 log.error('File type not supported')
                 return 1, '','File type not supported'
@@ -107,6 +181,8 @@ class FileTransform:
                 self.saveYamlFile(outfile, data)
             elif(fileType == 'json'):
                 self.saveJsonFile(outfile, data)
+            elif(fileType == 'hcl'):
+                self.saveHclFile(outfile, data)
             else:
                 log.error('File type not supported')
                 return 1, '','File type not supported'
