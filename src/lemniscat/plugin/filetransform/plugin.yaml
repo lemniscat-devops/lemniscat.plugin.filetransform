@@ -21,3 +21,5 @@ requirements:
     version: '6.0.1'
   - name: 'pytz'
     version: '2023.3'
+  - name: 'python-hcl2'
+    version: '4.3.0'
